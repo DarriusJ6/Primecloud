@@ -14,7 +14,7 @@ http:
     dashboard-auth:
       basicAuth:
         users:
-          - "admin:$apr1$QUx315xK$Tw2K9dVu/YntSJYI.tTPu."
+          - "admin:REDACTED"
 
     dashboard-ipwhitelist:
       ipWhiteList:
