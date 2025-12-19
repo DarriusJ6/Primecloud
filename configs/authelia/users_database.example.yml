@@ -1,4 +1,4 @@
-# Example ONLY — do not use real password hashes
+
 users:
   exampleuser:
     displayname: "Example User"
