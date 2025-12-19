@@ -1,0 +1,10 @@
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /certs/wildcard.primecloud.local.crt
+        keyFile: /certs/wildcard.primecloud.local.key
+
+  certificates:
+    - certFile: /certs/wildcard.primecloud.local.crt
+      keyFile: /certs/wildcard.primecloud.local.key

@@ -1,0 +1,14 @@
+http:
+  routers:
+    gitea:
+      rule: "Host(`git.primecloud.local`)"
+      entryPoints:
+        - websecure        # same name as your 443 entrypoint
+      service: gitea
+      tls: {}
+
+  services:
+    gitea:
+      loadBalancer:
+        servers:
+          - url: "http://10.10.30.13:3000"   # Gitea CT IP + port

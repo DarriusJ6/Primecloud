@@ -1,0 +1,34 @@
+sequenceDiagram
+    participant User
+    participant Traefik as Traefik<br/>(Reverse Proxy<br/>DMZ - VLAN 20)
+    participant Authelia as Authelia<br/>(Auth Gateway<br/>SERVICES - VLAN 30)
+    participant App as Application<br/>(SERVICES/APPS<br/>VLAN 30/40)
+    participant DB as PostgreSQL<br/>(Database<br/>SERVICES - VLAN 30)
+
+    User->>+Traefik: HTTPS Request (TLS encrypted)<br/>https://app.primecloud.io
+    Note over Traefik: TLS Termination<br/>Certificate validation
+    
+    Traefik->>+Authelia: Forward Auth Request<br/>Check session/credentials
+    Note over Authelia: Authentication Check<br/>Verify user session
+    
+    alt User Not Authenticated
+        Authelia-->>User: Redirect to Login Page
+        User->>Authelia: Provide Credentials
+        Note over Authelia: Validate Credentials<br/>Create Session
+    end
+    
+    Note over Authelia: Authorization Check<br/>Verify access permissions
+    
+    alt User Authorized
+        Authelia-->>-Traefik: 200 OK + User Headers<br/>(Remote-User, Remote-Email)
+        Traefik->>+App: Forward Request + Auth Headers<br/>HTTP (internal)
+        
+        App->>+DB: Query Database<br/>SELECT/INSERT/UPDATE
+        DB-->>-App: Return Data
+        
+        App-->>-Traefik: Response (HTTP)
+        Traefik-->>-User: Response (HTTPS)<br/>TLS encrypted
+    else User Not Authorized
+        Authelia-->>Traefik: 403 Forbidden
+        Traefik-->>User: 403 Access Denied
+    end

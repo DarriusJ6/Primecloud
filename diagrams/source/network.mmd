@@ -1,0 +1,97 @@
+flowchart TB
+    subgraph Physical["Physical Layer"]
+        R630["Dell PowerEdge R630<br/>2x Xeon CPUs<br/>128GB RAM<br/>RAID Storage"]
+        Switch["TP-Link Managed Switch<br/>8-Port Gigabit"]
+    end
+
+    subgraph SwitchPorts["Switch Port Configuration"]
+        Port1["Port 1/0/1<br/>TRUNK<br/>VLANs: 10,20,30,40,99"]
+        Port2["Port 1/0/2<br/>Access VLAN 10"]
+        Port3_7["Ports 1/0/3-7<br/>Access VLAN 1<br/>(System/Default)"]
+        Port8["Port 1/0/8<br/>Access VLAN 99"]
+    end
+
+    subgraph Hypervisor["Hypervisor Layer"]
+        Proxmox["Proxmox VE 9.0.10<br/>KVM/QEMU + LXC<br/>192.168.1.203"]
+        vmbr0["vmbr0 (WAN Bridge)<br/>Port: eno3<br/>192.168.1.203/24<br/>Gateway: 192.168.1.254"]
+        vmbr1["vmbr1 (Internal Bridge)<br/>Port: eno4<br/>VLAN-aware"]
+        vmbr1_10["vmbr1.10<br/>10.10.10.3/24"]
+    end
+
+    subgraph VLANs["Network Segmentation"]
+        subgraph VLAN10["VLAN 10 - MGMT<br/>10.10.10.0/24<br/>Gateway: 10.10.10.254"]
+            iDRAC["iDRAC"]
+            ProxmoxMgmt["Proxmox Interface<br/>10.10.10.3"]
+            OPNmgmt["OPNsense MGMT<br/>10.10.10.2"]
+        end
+
+        subgraph VLAN20["VLAN 20 - DMZ<br/>10.10.20.0/24<br/>Gateway: 10.10.20.254"]
+            Traefik["Traefik (CT 110)<br/>Reverse Proxy<br/>TLS Termination<br/>10.10.20.10"]
+        end
+
+        subgraph VLAN30["VLAN 30 - SERVICES<br/>10.10.30.0/24<br/>Gateway: 10.10.30.254"]
+            PostgreSQL["PostgreSQL (CT 310)<br/>Database<br/>10.10.30.10"]
+            Authelia["Authelia (CT 311)<br/>Auth Gateway<br/>10.10.30.11"]
+            Vaultwarden["Vaultwarden (CT 312)<br/>Secrets<br/>10.10.30.12"]
+            Gitea["Gitea (CT 313)<br/>Git Repository<br/>10.10.30.13"]
+            Monitoring["Monitoring (CT 330)<br/>Prometheus/Grafana<br/>10.10.30.30"]
+            Woodpecker["Woodpecker (CT 340)<br/>CI/CD<br/>10.10.30.40"]
+            ResticRepo["Restic-Repo (CT 350)<br/>Backup Storage<br/>10.10.30.50"]
+        end
+
+        subgraph VLAN40["VLAN 40 - APPS<br/>10.10.40.0/24<br/>Gateway: 10.10.40.254"]
+            NoApps["(No applications deployed yet)"]
+        end
+
+        subgraph VLAN99["VLAN 99 - LAB<br/>10.10.99.0/24<br/>Gateway: 10.10.99.254"]
+            Lab["Testing VMs/CTs<br/>Experimental"]
+        end
+
+        OPNsense["OPNsense Firewall (VM 100)<br/>Router & Security Gateway<br/>Interfaces on ALL VLANs"]
+    end
+
+    Internet((("Internet<br/>192.168.1.0/24")))
+
+    Internet <--> vmbr0
+    vmbr0 <--> OPNsense
+    
+    R630 -.eno4.-> Port1
+    Port1 <--> vmbr1
+    Port2 -.-> VLAN10
+    Port8 -.-> VLAN99
+    
+    Proxmox --> vmbr0
+    Proxmox --> vmbr1
+    vmbr1 --> vmbr1_10
+    vmbr1_10 --> ProxmoxMgmt
+    vmbr1 --> VLANs
+    
+    OPNsense -.routes.-> VLAN10
+    OPNsense -.routes.-> VLAN20
+    OPNsense -.routes.-> VLAN30
+    OPNsense -.routes.-> VLAN40
+    OPNsense -.routes.-> VLAN99
+
+    Traefik -->|forwards to| Authelia
+    Authelia -->|queries| PostgreSQL
+    Woodpecker -->|queries| PostgreSQL
+    Gitea -->|queries| PostgreSQL
+    Monitoring -->|scrapes| PostgreSQL
+    Monitoring -->|scrapes| Traefik
+
+    style Physical fill:#e1f5ff,stroke:#01579b,stroke-width:3px
+    style SwitchPorts fill:#fff9c4,stroke:#f57f17,stroke-width:2px
+    style Hypervisor fill:#fff3e0,stroke:#e65100,stroke-width:3px
+    style VLANs fill:#f3e5f5,stroke:#4a148c,stroke-width:3px
+    style VLAN10 fill:#ffebee,stroke:#c62828,stroke-width:2px
+    style VLAN20 fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
+    style VLAN30 fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    style VLAN40 fill:#f5f5f5,stroke:#9e9e9e,stroke-width:2px,stroke-dasharray: 5 5
+    style VLAN99 fill:#f5f5f5,stroke:#616161,stroke-width:2px
+    style OPNsense fill:#ff6b6b,stroke:#c92a2a,stroke-width:3px,color:#fff
+    style vmbr0 fill:#ffd700,stroke:#ff8c00,stroke-width:2px
+    style vmbr1 fill:#90ee90,stroke:#228b22,stroke-width:2px
+    style NoApps fill:#e0e0e0,stroke:#757575,stroke-dasharray: 3 3
+    style Port1 fill:#4caf50,stroke:#2e7d32,stroke-width:2px,color:#fff
+    style Port2 fill:#ffcdd2,stroke:#c62828,stroke-width:2px
+    style Port8 fill:#e0e0e0,stroke:#616161,stroke-width:2px

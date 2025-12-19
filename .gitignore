@@ -1,0 +1,12 @@
+# Sensitive files
+*.env
+**/secrets/
+evidence/
+acme.json
+*.key
+*.pem
+
+# Common noise
+.DS_Store
+Thumbs.db
+*.log

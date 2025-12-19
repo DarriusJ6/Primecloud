@@ -1,0 +1,85 @@
+flowchart TB
+    subgraph Internet["INTERNET ZONE<br/>(Untrusted)"]
+        WAN["External Users<br/>Threats<br/>Attacks"]
+    end
+
+    subgraph TrustBoundary1["═══ TRUST BOUNDARY 1 ═══"]
+        Firewall1["OPNsense Firewall<br/>WAN Interface<br/>Stateful Inspection<br/>IDS/IPS"]
+    end
+
+    subgraph DMZ["DMZ ZONE - VLAN 20<br/>10.10.20.0/24<br/>(Semi-Trusted / Bastion)"]
+        Traefik["Traefik<br/>Reverse Proxy<br/>TLS Termination<br/>10.10.20.10"]
+    end
+
+    subgraph TrustBoundary2["═══ TRUST BOUNDARY 2 ═══"]
+        Firewall2["OPNsense Firewall<br/>Internal Routing<br/>Access Control Lists"]
+    end
+
+    subgraph InternalZones["INTERNAL ZONES (Trusted)"]
+        subgraph MGMT["MANAGEMENT ZONE - VLAN 10<br/>10.10.10.0/24<br/>(Highly Restricted)"]
+            Proxmox["Proxmox<br/>10.10.10.3"]
+            iDRAC["iDRAC<br/>Hardware Mgmt"]
+        end
+
+        subgraph SERVICES["SERVICES ZONE - VLAN 30<br/>10.10.30.0/24<br/>(Protected Backend)"]
+            Auth["Authelia<br/>10.10.30.11"]
+            DB["PostgreSQL<br/>10.10.30.10"]
+            Vault["Vaultwarden<br/>10.10.30.12"]
+            Git["Gitea<br/>10.10.30.13"]
+            Monitor["Monitoring<br/>10.10.30.30"]
+        end
+
+        subgraph APPS["APPS ZONE - VLAN 40<br/>10.10.40.0/24<br/>(Application Tier)"]
+            AppPlaceholder["Future Applications"]
+        end
+
+        subgraph LAB["LAB ZONE - VLAN 99<br/>10.10.99.0/24<br/>(Isolated Testing)"]
+            Test["Test VMs/CTs<br/>Quarantined"]
+        end
+    end
+
+    WAN ==>|"❌ BLOCKED<br/>Direct Access Denied"| SERVICES
+    WAN ==>|"❌ BLOCKED<br/>Direct Access Denied"| APPS
+    WAN ==>|"❌ BLOCKED<br/>Direct Access Denied"| MGMT
+
+    WAN -->|"✅ ALLOWED<br/>HTTPS:443 Only"| Firewall1
+    Firewall1 -->|"✅ ALLOWED<br/>Port 443"| Traefik
+
+    Traefik -.->|"❌ BLOCKED<br/>No Direct Access"| DB
+    Traefik -.->|"❌ BLOCKED<br/>No Direct Access"| Vault
+    Traefik -.->|"❌ BLOCKED<br/>No Direct Access"| MGMT
+
+    Traefik -->|"✅ ALLOWED<br/>Auth Check"| Firewall2
+    Firewall2 -->|"✅ ALLOWED<br/>Authenticated Only"| Auth
+    Auth -->|"✅ ALLOWED<br/>DB Query"| DB
+
+    Firewall2 -->|"✅ ALLOWED<br/>Authorized Traffic"| SERVICES
+    Firewall2 -->|"✅ ALLOWED<br/>Authorized Traffic"| APPS
+
+    SERVICES -->|"✅ ALLOWED<br/>Inter-service Comms"| SERVICES
+    APPS -->|"✅ ALLOWED<br/>Query Services"| SERVICES
+
+    MGMT -.->|"❌ RESTRICTED<br/>Admin Only<br/>VPN/SSH"| Firewall2
+    SERVICES -.->|"❌ BLOCKED<br/>No Outbound Internet"| WAN
+    APPS -.->|"❌ BLOCKED<br/>No Outbound Internet"| WAN
+
+    LAB -.->|"❌ ISOLATED<br/>No Production Access"| SERVICES
+    LAB -.->|"❌ ISOLATED<br/>No Production Access"| APPS
+    LAB -.->|"❌ ISOLATED<br/>No Production Access"| DMZ
+
+    Monitor -->|"✅ ALLOWED<br/>Read-Only Metrics"| Traefik
+    Monitor -->|"✅ ALLOWED<br/>Read-Only Metrics"| DB
+
+    style Internet fill:#ffcdd2,stroke:#c62828,stroke-width:4px
+    style DMZ fill:#fff3e0,stroke:#ef6c00,stroke-width:3px
+    style MGMT fill:#ffebee,stroke:#c62828,stroke-width:3px
+    style SERVICES fill:#e8f5e9,stroke:#2e7d32,stroke-width:3px
+    style APPS fill:#e3f2fd,stroke:#1565c0,stroke-width:3px
+    style LAB fill:#f5f5f5,stroke:#616161,stroke-width:2px,stroke-dasharray: 5 5
+    style InternalZones fill:#f3e5f5,stroke:#4a148c,stroke-width:3px
+    style TrustBoundary1 fill:#ff6b6b,stroke:#c92a2a,stroke-width:4px
+    style TrustBoundary2 fill:#ff6b6b,stroke:#c92a2a,stroke-width:4px
+    style Firewall1 fill:#d32f2f,stroke:#b71c1c,stroke-width:3px,color:#fff
+    style Firewall2 fill:#d32f2f,stroke:#b71c1c,stroke-width:3px,color:#fff
+    style Traefik fill:#ff9800,stroke:#e65100,stroke-width:2px
+    style AppPlaceholder fill:#e0e0e0,stroke:#757575,stroke-dasharray: 3 3

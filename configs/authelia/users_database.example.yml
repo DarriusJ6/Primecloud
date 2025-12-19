@@ -1,0 +1,9 @@
+# Example ONLY — do not use real password hashes
+users:
+  exampleuser:
+    displayname: "Example User"
+    password: "$argon2id$v=19$m=65536,t=3,p=4$REDACTED$REDACTED"
+    email: "exampleuser@example.com"
+    groups:
+      - admins
+      - users

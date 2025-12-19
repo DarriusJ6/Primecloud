@@ -1,0 +1,14 @@
+http:
+  routers:
+    authelia:
+      rule: "Host(`auth.primecloud.local`)"
+      entryPoints:
+        - websecure
+      service: authelia
+      tls: {}
+
+  services:
+    authelia:
+      loadBalancer:
+        servers:
+          - url: "http://10.10.30.11:9091"  # Authelia CT IP + port

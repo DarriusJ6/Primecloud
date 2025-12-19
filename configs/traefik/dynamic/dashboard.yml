@@ -1,0 +1,22 @@
+http:
+  routers:
+    dashboard:
+      rule: "Host(`traefik.primecloud.local`)"
+      entryPoints:
+        - websecure
+      service: api@internal
+      tls: {}
+      middlewares:
+        - dashboard-auth
+        - dashboard-ipwhitelist
+
+  middlewares:
+    dashboard-auth:
+      basicAuth:
+        users:
+          - "admin:$apr1$QUx315xK$Tw2K9dVu/YntSJYI.tTPu."
+
+    dashboard-ipwhitelist:
+      ipWhiteList:
+        sourceRange:
+          - "10.10.10.0/24"

@@ -1,0 +1,53 @@
+version: '3.8'
+
+networks:
+  proxy:
+    external: true
+  vault:
+    driver: bridge
+
+services:
+  vault:
+    image: hashicorp/vault:latest
+    container_name: vault
+    restart: unless-stopped
+    
+    security_opt:
+      - apparmor=unconfined
+    
+    cap_add:
+      - IPC_LOCK
+    
+    networks:
+      - proxy
+      - vault
+    
+    ports:
+      - "8200:8200"
+    
+    volumes:
+      - ./config:/vault/config:ro
+      - ./data:/vault/data:rw
+      - ./logs:/vault/logs:rw
+      - /etc/localtime:/etc/localtime:ro
+    
+    environment:
+      - VAULT_ADDR=http://0.0.0.0:8200
+    
+    command: server
+    
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.vault.rule=Host(`vault.primecloud.local`)"
+      - "traefik.http.routers.vault.entrypoints=https"
+      - "traefik.http.routers.vault.tls=true"
+      - "traefik.http.routers.vault.service=vault"
+      - "traefik.http.services.vault.loadbalancer.server.port=8200"

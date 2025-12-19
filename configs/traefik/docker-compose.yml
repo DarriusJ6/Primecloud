@@ -1,0 +1,36 @@
+version: "3.9"
+
+services:
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+    networks:
+      - traefik-network
+
+    ports:
+      - "10.10.20.10:80:80"
+      - "10.10.20.10:443:443"
+      - "10.10.20.10:8080:8080"
+
+    environment:
+      - TZ=America/New_York
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /srv/traefik/config/traefik.yml:/etc/traefik/traefik.yml:ro
+      - /srv/traefik/config/dynamic:/etc/traefik/dynamic:ro
+      - /srv/traefik/certs:/certs:ro
+      - /srv/traefik/acme:/acme
+      - /srv/traefik/logs:/logs
+
+    labels:
+      - "traefik.enable=true"
+
+networks:
+  traefik-network:
+    name: traefik-network
+    driver: bridge

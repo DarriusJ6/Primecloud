@@ -1,0 +1,75 @@
+---
+theme: dark
+default_2fa_method: totp
+
+server:
+  host: 0.0.0.0
+  port: 9091
+
+log:
+  level: info
+  format: text
+
+totp:
+  disable: false
+  issuer: primecloud.local
+  algorithm: sha1
+  digits: 6
+  period: 30
+  skew: 1
+
+ntp:
+  address: "time.cloudflare.com:123"
+  version: 4
+  max_desync: 3s
+
+authentication_backend:
+  file:
+    path: /config/users_database.yml
+    password:
+      algorithm: argon2
+      argon2:
+        variant: argon2id
+        iterations: 3
+        memory: 65536
+        parallelism: 4
+
+access_control:
+  default_policy: deny
+  
+  rules:
+    - domain: auth.primecloud.local
+      policy: bypass
+    
+    - domain: "*.primecloud.local"
+      policy: two_factor
+      subject:
+        - "group:admins"
+        - "group:users"
+
+session:
+  name: authelia_session
+  domain: auth.primecloud.local
+  same_site: lax
+  expiration: 1h
+  inactivity: 5m
+  remember_me_duration: 1M
+
+regulation:
+  max_retries: 5
+  find_time: 2m
+  ban_time: 5m
+
+storage:
+  local:
+    path: /config/db.sqlite3
+
+notifier:
+  smtp:
+    host: smtp.gmail.com
+    port: 587
+    username: "jdarrius246@gmail.com"
+    password: "Redacted"
+    sender: "PrimeCloud <jdarrius246@gmail.com>"
+    subject: "[PrimeCloud] {title}"
+    startup_check_address: "jdarrius246@gmail.com"
